@@ -432,6 +432,43 @@ private:
         return DefSubclassProc(window, message, wParam, lParam);
     }
 
+
+    static LRESULT CALLBACK outputEditProc(HWND window, UINT message, WPARAM wParam,
+                                           LPARAM lParam, UINT_PTR, DWORD_PTR reference) {
+        App* self = reinterpret_cast<App*>(reference);
+        if (message == WM_PAINT && GetFocus() != window) {
+            PAINTSTRUCT paint{};
+            HDC dc = BeginPaint(window, &paint);
+            RECT client{};
+            GetClientRect(window, &client);
+            FillRect(dc, &client, self->cardBrush_);
+            const int length = GetWindowTextLengthW(window);
+            std::vector<wchar_t> buffer(static_cast<size_t>(length) + 1, L'\0');
+            if (length > 0) GetWindowTextW(window, buffer.data(), length + 1);
+            const wchar_t* text = length > 0 ? buffer.data() :
+                self->tr(L"留空：与各源文件保存在同一目录",
+                         L"Empty: save next to each source file");
+            SetBkMode(dc, TRANSPARENT);
+            SetTextColor(dc, length > 0 ? self->palette_.text : self->palette_.muted);
+            SelectObject(dc, self->uiFont_);
+            RECT label = client;
+            label.left += self->scale(10);
+            label.right -= self->scale(10);
+            DrawTextW(dc, text, -1, &label,
+                      DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX |
+                          (length > 0 ? DT_PATH_ELLIPSIS : DT_END_ELLIPSIS));
+            EndPaint(window, &paint);
+            return 0;
+        }
+        if (message == WM_SETFOCUS || message == WM_KILLFOCUS) {
+            InvalidateRect(window, nullptr, TRUE);
+        }
+        if (message == WM_NCDESTROY) {
+            RemoveWindowSubclass(window, &App::outputEditProc, 1);
+        }
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+
     static LRESULT CALLBACK aboutProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
         App* self = reinterpret_cast<App*>(GetWindowLongPtrW(window, GWLP_USERDATA));
         if (message == WM_NCCREATE) {
@@ -500,9 +537,8 @@ private:
                                    42, 158, 58, 28);
         outputEdit_ = makeControl(WC_EDITW, L"", ES_AUTOHSCROLL | WS_TABSTOP,
                                   108, 158, 620, 30, IDC_OUTPUT);
-        SendMessageW(outputEdit_, EM_SETCUEBANNER, TRUE,
-                     reinterpret_cast<LPARAM>(tr(L"留空：与各源文件保存在同一目录",
-                                                L"Empty: save next to each source file")));
+        SetWindowSubclass(outputEdit_, &App::outputEditProc, 1,
+                          reinterpret_cast<DWORD_PTR>(this));
         browseButton_ = makeControl(WC_BUTTONW, tr(L"浏览…", L"Browse…"),
                                     BS_OWNERDRAW | WS_TABSTOP, 828, 156, 88, 32, IDC_BROWSE);
         trimCheck_ = makeControl(WC_BUTTONW, tr(L"同时清理末尾的多余数据", L"Trim trailing data"),
@@ -1213,16 +1249,13 @@ private:
                         tr(L"打开链接", L"Open link"), MB_OK | MB_ICONINFORMATION);
             return;
         }
-        // Route through the shell so the browser does not inherit an elevated token
-        // when this tool happens to run elevated. A browser that is already
-        // elevated is handled above, because Windows blocks that hand-off.
-        std::wstring arguments = L"\"";
-        arguments += url;
-        arguments += L"\"";
+        // Let the shell resolve the registered browser directly. Starting a new
+        // explorer.exe process for a URL can fail with STATUS_DLL_INIT_FAILED.
         const HINSTANCE launched =
-            ShellExecuteW(window_, L"open", L"explorer.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL);
-        if (reinterpret_cast<INT_PTR>(launched) <= 32) {
             ShellExecuteW(window_, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
+        if (reinterpret_cast<INT_PTR>(launched) <= 32) {
+            const std::wstring arguments = L"url.dll,FileProtocolHandler \"" + std::wstring(url) + L"\"";
+            ShellExecuteW(window_, L"open", L"rundll32.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL);
         }
     }
 
@@ -1535,9 +1568,7 @@ private:
         SetWindowTextW(removeButton_, tr(L"移除所选", L"Remove"));
         SetWindowTextW(clearButton_, tr(L"清空列表", L"Clear"));
         SetWindowTextW(outputLabel_, tr(L"保存到", L"Save to"));
-        SendMessageW(outputEdit_, EM_SETCUEBANNER, TRUE,
-                     reinterpret_cast<LPARAM>(tr(L"留空：与各源文件保存在同一目录",
-                                                L"Empty: save next to each source file")));
+        InvalidateRect(outputEdit_, nullptr, TRUE);
         SetWindowTextW(browseButton_, tr(L"浏览…", L"Browse…"));
         SetWindowTextW(trimCheck_, tr(L"同时清理末尾的多余数据", L"Trim trailing data"));
         SetWindowTextW(status_, tr(L"准备就绪 · 源文件始终保持不变",

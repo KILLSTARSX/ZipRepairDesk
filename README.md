@@ -35,6 +35,16 @@
 
 视频文件、无损 ZIP、只识别格式会标成“视频文件 / 无需转换 / 暂不支持”，不会生成多余副本。
 
+### Windows 打开文件安全提示
+
+从浏览器或聊天软件下载的 EXE 会带“来自 Internet”标记，Windows 可能仍显示一次“打开文件 - 安全警告”。发行商应显示为 **KILL-STAR SX**；这与 UAC 管理员权限无关。对本机文件右键“属性”并选择“解除锁定”，或在 PowerShell 执行：
+
+```powershell
+Unblock-File .\ZipRepairDesk.exe
+```
+
+源码构建和 `sign.ps1` 签名后的本机文件会自动清除这个标记。
+
 ## 构建
 
 需要 MinGW-w64 工具链（`g++`、`windres`、`objcopy`），例如 [w64devkit](https://github.com/skeeto/w64devkit)。

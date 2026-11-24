@@ -11,6 +11,7 @@ $Certificate = Get-ChildItem Cert:\CurrentUser\My |
 if (-not $Certificate) { throw "Code-signing certificate with private key not found: $Thumbprint" }
 $Result = Set-AuthenticodeSignature -FilePath $Path -Certificate $Certificate -HashAlgorithm SHA256
 if ($Result.Status -ne "Valid") { throw "Authenticode signing failed: $($Result.Status) $($Result.StatusMessage)" }
+Unblock-File -Path $Path
 $File = Get-Item $Path
 [PSCustomObject]@{
   File = $File.FullName

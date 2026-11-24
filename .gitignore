@@ -1,0 +1,14 @@
+.tmp/
+dist/
+tools/
+tests/__pycache__/
+tests/.work/
+tests/.gui-work/
+tests/.probe/
+tests/.fmt-work/
+tests/.pv-work/
+*.o
+*.obj
+*.pdb
+*.ilk
+*.res

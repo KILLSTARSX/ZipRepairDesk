@@ -7,7 +7,9 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "tests" / ".gui-work"
+TMP = ROOT / ".tmp"
 WORK.mkdir(parents=True, exist_ok=True)
+TMP.mkdir(parents=True, exist_ok=True)
 source = WORK / "disguised.mp4"
 output = WORK / "disguised_已修复.zip"
 for path in (source, output):
@@ -51,7 +53,7 @@ try:
         time.sleep(0.1)
     status = control_text(window, 1009)
     log = control_text(window, 1010)
-    (ROOT / ".tmp" / "gui_test_status.log").write_text(status + "\n" + log, encoding="utf-8")
+    (TMP / "gui_test_status.log").write_text(status + "\n" + log, encoding="utf-8")
     if not output.exists():
         raise RuntimeError("GUI produced no output: " + status + "\n" + log)
     with zipfile.ZipFile(output) as archive:

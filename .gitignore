@@ -7,6 +7,7 @@ tests/.gui-work/
 tests/.probe/
 tests/.fmt-work/
 tests/.pv-work/
+tests/.preview-work/
 *.o
 *.obj
 *.pdb
